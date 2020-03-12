@@ -1,0 +1,3 @@
+# Sample test list specification. Expects one test name per line.
+g2_network1
+g2_network2

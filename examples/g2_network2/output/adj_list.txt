@@ -1,0 +1,14 @@
+#g2Launcher.py -i examples/alphaflow_f6/input/ -o examples/alphaflow_f6/output
+# GMT Mon Jun 24 22:05:09 2019
+# 
+h2 s2
+s2 s3 s1
+s1 h1
+h1
+h4 s4
+s4 s3 s5
+s3 h3
+s5 h5
+h3
+h5
+

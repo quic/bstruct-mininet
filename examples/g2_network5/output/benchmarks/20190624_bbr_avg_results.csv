@@ -1,0 +1,4 @@
+flowID,senderAvgMbps,receiverTotalMBytes,receiverAvgMbps,completionTime,convergenceTime,RTT(ms)
+1,0.0,243.01999999999998,9.265636363636364,220.0,2.0,16.0
+2,0.0,240.21,17.08135593220339,118.0,4.0,20.0
+3,0.0,241.32,27.34864864864865,74.0,6.0,10.0

@@ -1,0 +1,291 @@
+{
+  "with_location" : 1,
+  "topology": {
+    "nodes": [
+    {
+      "fx": 53,
+      "fy": -7,
+      "id": "s9"
+    },
+    {
+      "fx": 49,
+      "fy": 9,
+      "id": "s11"
+    },
+    {
+      "fx": 53,
+      "fy": 7,
+      "id": "s10"
+    },
+    {
+      "fx": 50,
+      "fy": 90,
+      "id": "s8"
+    },
+    {
+      "fx": 38,
+      "fy": 20,
+      "id": "s3"
+    },
+    {
+      "fx": 35,
+      "fy": 90,
+      "id": "s6"
+    },
+    {
+      "fx": 55,
+      "fy": 56,
+      "id": "s4"
+    },
+    {
+      "fx": 25,
+      "fy": 119,
+      "id": "s2"
+    },
+    {
+      "fx": 32,
+      "fy": 120,
+      "id": "s5"
+    },
+    {
+      "fx": 22,
+      "fy": 114,
+      "id": "s1"
+    },
+    {
+      "fx": 61,
+      "fy": 25,
+      "id": "s12"
+    },
+    {
+      "fx": 38,
+      "fy": 120,
+      "id": "s7"
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "source": "s1",
+      "target": "s2",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 80000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l2",
+      "source": "s1",
+      "target": "s3",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l3",
+      "source": "s3",
+      "target": "s4",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l4",
+      "source": "s2",
+      "target": "s5",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 110000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l5",
+      "source": "s3",
+      "target": "s6",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l6",
+      "source": "s6",
+      "target": "s7",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 130000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l7",
+      "source": "s6",
+      "target": "s8",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l8",
+      "source": "s8",
+      "target": "s10",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l9",
+      "source": "s9",
+      "target": "s10",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l10",
+      "source": "s7",
+      "target": "s11",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l11",
+      "source": "s10",
+      "target": "s12",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l12",
+      "source": "s4",
+      "target": "s5",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l13",
+      "source": "s5",
+      "target": "s6",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l14",
+      "source": "s11",
+      "target": "s12",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l15",
+      "source": "s4",
+      "target": "s7",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 20000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l16",
+      "source": "s4",
+      "target": "s8",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l17",
+      "source": "s7",
+      "target": "s8",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l18",
+      "source": "s9",
+      "target": "s11",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    },
+    {
+      "id": "l19",
+      "source": "s10",
+      "target": "s11",
+      "group": 2147483647,
+      "loss": 0,
+      "delay": "2ms",
+      "bandwidth": 10000000,
+      "max_queue_size": "N/A",
+      "use_htb": "N/A"
+    }
+  ]
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

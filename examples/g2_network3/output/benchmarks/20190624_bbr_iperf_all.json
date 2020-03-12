@@ -1,0 +1,235 @@
+{
+  "1": {
+    "completionTime": 6.0, 
+    "convergenceTime": -1, 
+    "flowStr": "h1-h5", 
+    "links": [
+      [
+        "h1", 
+        "s1"
+      ], 
+      [
+        "s1", 
+        "s2"
+      ], 
+      [
+        "s2", 
+        "s5"
+      ], 
+      [
+        "s5", 
+        "h5"
+      ]
+    ], 
+    "receiver": "h5", 
+    "receiverAvgMbps": 261.6666666666667, 
+    "receiverMBytes": [
+      102.0, 
+      48.6, 
+      36.6
+    ], 
+    "receiverMbps": [
+      428.0, 
+      204.0, 
+      153.0
+    ], 
+    "receiverTotalMBytes": 187.2, 
+    "receiverTs": [
+      2.0, 
+      4.0, 
+      6.0
+    ], 
+    "rtt": 16.0, 
+    "sender": "h1", 
+    "senderAvgMbps": 0.0, 
+    "senderMbps": [], 
+    "senderTs": []
+  }, 
+  "2": {
+    "completionTime": 6.0, 
+    "convergenceTime": -1, 
+    "flowStr": "h1-h2", 
+    "links": [
+      [
+        "h1", 
+        "s1"
+      ], 
+      [
+        "s1", 
+        "s2"
+      ], 
+      [
+        "s2", 
+        "h2"
+      ]
+    ], 
+    "receiver": "h2", 
+    "receiverAvgMbps": 259.0, 
+    "receiverMBytes": [
+      99.0, 
+      43.2, 
+      43.1
+    ], 
+    "receiverMbps": [
+      415.0, 
+      181.0, 
+      181.0
+    ], 
+    "receiverTotalMBytes": 185.29999999999998, 
+    "receiverTs": [
+      2.0, 
+      4.0, 
+      6.0
+    ], 
+    "rtt": 12.0, 
+    "sender": "h1", 
+    "senderAvgMbps": 0.0, 
+    "senderMbps": [], 
+    "senderTs": []
+  }, 
+  "3": {
+    "completionTime": 4.0, 
+    "convergenceTime": -1, 
+    "flowStr": "h3-h8", 
+    "links": [
+      [
+        "h3", 
+        "s3"
+      ], 
+      [
+        "s3", 
+        "s6"
+      ], 
+      [
+        "s6", 
+        "s7"
+      ], 
+      [
+        "s7", 
+        "s8"
+      ], 
+      [
+        "s8", 
+        "h8"
+      ]
+    ], 
+    "receiver": "h8", 
+    "receiverAvgMbps": 443.0, 
+    "receiverMBytes": [
+      136.0, 
+      75.0
+    ], 
+    "receiverMbps": [
+      571.0, 
+      315.0
+    ], 
+    "receiverTotalMBytes": 211.0, 
+    "receiverTs": [
+      2.0, 
+      4.0
+    ], 
+    "rtt": 20.0, 
+    "sender": "h3", 
+    "senderAvgMbps": 0.0, 
+    "senderMbps": [], 
+    "senderTs": []
+  }, 
+  "4": {
+    "completionTime": 4.0, 
+    "convergenceTime": -1, 
+    "flowStr": "h2-h7", 
+    "links": [
+      [
+        "h2", 
+        "s2"
+      ], 
+      [
+        "s2", 
+        "s5"
+      ], 
+      [
+        "s5", 
+        "s6"
+      ], 
+      [
+        "s6", 
+        "s7"
+      ], 
+      [
+        "s7", 
+        "h7"
+      ]
+    ], 
+    "receiver": "h7", 
+    "receiverAvgMbps": 406.0, 
+    "receiverMBytes": [
+      113.0, 
+      80.3
+    ], 
+    "receiverMbps": [
+      475.0, 
+      337.0
+    ], 
+    "receiverTotalMBytes": 193.3, 
+    "receiverTs": [
+      2.0, 
+      4.0
+    ], 
+    "rtt": 20.0, 
+    "sender": "h2", 
+    "senderAvgMbps": 0.0, 
+    "senderMbps": [], 
+    "senderTs": []
+  }, 
+  "5": {
+    "completionTime": 4.0, 
+    "convergenceTime": -1, 
+    "flowStr": "h2-h11", 
+    "links": [
+      [
+        "h2", 
+        "s2"
+      ], 
+      [
+        "s2", 
+        "s5"
+      ], 
+      [
+        "s5", 
+        "s4"
+      ], 
+      [
+        "s4", 
+        "s7"
+      ], 
+      [
+        "s7", 
+        "s11"
+      ], 
+      [
+        "s11", 
+        "h11"
+      ]
+    ], 
+    "receiver": "h11", 
+    "receiverAvgMbps": 386.5, 
+    "receiverMBytes": [
+      106.0, 
+      78.8
+    ], 
+    "receiverMbps": [
+      443.0, 
+      330.0
+    ], 
+    "receiverTotalMBytes": 184.8, 
+    "receiverTs": [
+      2.0, 
+      4.0
+    ], 
+    "rtt": 24.0, 
+    "sender": "h2", 
+    "senderAvgMbps": 0.0, 
+    "senderMbps": [], 
+    "senderTs": []
+  }
+}

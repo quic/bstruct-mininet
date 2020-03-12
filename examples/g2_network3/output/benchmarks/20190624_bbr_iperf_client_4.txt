@@ -1,0 +1,9 @@
+------------------------------------------------------------
+Client connecting to 10.0.7.10, TCP port 5005
+TCP window size:  128 KByte (default)
+------------------------------------------------------------
+[ 57] local 10.0.2.10 port 43136 connected with 10.0.7.10 port 5005
+[ ID] Interval       Transfer     Bandwidth
+[ 57]  0.0- 2.0 sec   126 MBytes   528 Mbits/sec
+[ 57]  2.0- 4.0 sec  78.4 MBytes   329 Mbits/sec
+[ 57]  0.0- 5.3 sec   244 MBytes   383 Mbits/sec
