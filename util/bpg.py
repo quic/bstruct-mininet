@@ -1,46 +1,56 @@
 import numpy as np
+from collections import OrderedDict
+from copy import deepcopy
+from warnings import warn
 
 
 class Network:
-    def __init__(self, F, C, L=None, M=None, num_links=38):
+    def __init__(self, F: dict, C: dict, L: dict = None, M: dict = None, num_links=None):
         """
             F : Flow dictionary (key = flow ID, value = link IDs)
             C : Capacity dictionary (key = link ID, value = capacity)
             L : Link dictionary (key = link ID, value = flow IDs)
             M : Minimal rate dictionary (key = flow ID, value = minimal rate)
-            num_links : number of links in the network, the default 38 accounts for Google's B4 network
+            num_links : number of links in the network
         """
-        self.F = F
-        self.C = C
+        self.F = F.copy()
+        self.C = C.copy()
         self.num_links = num_links
         if L is None:
-            self.L = self.L_from_F(F)
+            self.L = self.l_from_f(F, num_links)
         else:
-            self.L = L
+            self.L = L.copy()
         if M is None:
             self.M = {key: 0 for key in F.keys()}
         else:
-            self.M = M
+            self.M = M.copy()
 
-    def L_from_F(self, F):
-        """
-        In case only flow dictionary is given, this function obtains link dictionary from flow dictionary.
-        Note that L depends on num_links
-        """
-        L = {i: [] for i in range(self.num_links)}
-        for key, val in F.items():
-            for link in val:
-                L[link].append(key)
+        self.input_F = deepcopy(self.F)
+        self.input_C = deepcopy(self.C)
+        self.input_L = deepcopy(self.L)
+        self.input_M = deepcopy(self.M)
+
+    def l_from_f(self, f: dict, num_links):
+        L = dict() if num_links is None else {i: [] for i in range(self.num_links)}
+        for key, links in f.items():
+            for l in links:
+                if l not in L.keys():
+                    L[l] = [key]
+                elif key not in L[l]:
+                    L[l].append(key)
         return L
 
-    def get_links(self, flow_idx):
-        return self.F[flow_idx]
+    def get_links(self, flow_idx, active=True):
+        # use active to access current link pool, else access the original
+        return self.F[flow_idx] if active else self.input_F[flow_idx]
 
-    def get_flows(self, link_idx):
-        return self.L[link_idx]
+    def get_flows(self, link_idx, active=True):
+        # use active to access current link pool, else access the original
+        return self.L[link_idx] if active else self.input_L[link_idx]
 
-    def get_capacity(self, link_idx):
-        return self.C[link_idx]
+    def get_capacity(self, link_idx, active=True):
+        # use active to access current link pool, else access the original
+        return self.C[link_idx] if active else self.input_C[link_idx]
 
     def get_min_rates(self, list_flow_idx):
         return np.array([self.M[i] for i in list_flow_idx])
@@ -57,21 +67,29 @@ class Network:
         else:
             return np.max([rates[i] for i in range(len(rates)) if rates[i] > min_rates[i]])
 
-    def get_all_links(self):
+    def get_active_links(self):
         """
         :return: links that are none-empty
         """
         return [link_idx for link_idx in self.L.keys() if len(self.L[link_idx]) > 0]
 
-    def get_connected_links(self, link_idx):
+    def get_connected_links(self, link_idx, L: dict = None, F: dict = None):
         """
         :param link_idx: a link ID
+        :param flows: this function has an option for custom flows
+        :param F: this function has an option for flow dict
         :return: a list of all link IDs that share at least one flow with link_idx (no duplications)
         """
-        flows = self.get_flows(link_idx)
+        assert (L is None) == (F is None)
+        if L is None:
+            flows = self.get_flows(link_idx)
+            F = self.F
+        else:
+            flows = L[link_idx]
+
         connected_links = set()  # a set
         for flow_idx in flows:
-            connected_links = connected_links.union(self.F[flow_idx])
+            connected_links = connected_links.union(F[flow_idx])
         return list(connected_links)
 
     def solve_single_link_cmm(self, link_idx):
@@ -89,14 +107,12 @@ class Network:
         is_constrained_flow = [False for _ in range(num_flows)]  # constrained flows indicator
         total_constrained_flow_rate = 0
         num_constrained_flows = 0
-        ad_rate = 0
 
         while True:
             rl = float(capacity - total_constrained_flow_rate) / (num_flows - num_constrained_flows)
             for i in range(num_flows):
                 if not is_constrained_flow[i]:
                     rates[i] = rl
-
             ad_rate = self.get_advertised_rate(rates, min_rates, capacity)
 
             is_end = True
@@ -122,13 +138,20 @@ class Network:
         """
         self.C[link_idx] += inc
 
-    def remove_link_and_flows(self, link_idx):
+    def remove_link_flows_update_cap(self, link_idx, flow_rate_dict):
         """
-        remove link_idx and the flows passing through it
+        remove link_idx and the flows passing through it, then update capacities accordingly
         :param link_idx: the ID of link to be removed
+        :param flow_rate_dict: a dict that has the rates of the flows to be removed
         :return:
         """
         flows = self.get_flows(link_idx)
+        # update capacities
+        for f in flows:
+            for link in self.get_links(f):
+                self.update_capacity(link, -flow_rate_dict[f])
+
+        # remove links and flows
         del self.L[link_idx]
         del self.C[link_idx]
         for f in flows:
@@ -138,11 +161,27 @@ class Network:
             del self.F[f]
             del self.M[f]
 
+        # cleaning up
+        links_to_remove = set()
+        for l, cap in self.C.items():
+            if np.isclose(cap, 0):
+                links_to_remove.add(l)
+            elif cap < 0:
+                warn("Encountered negative capacity")
+
+        for l, flows in self.L.items():
+            if len(flows) == 0:
+                links_to_remove.add(l)
+
+        for l in links_to_remove:
+            del self.C[l]
+            del self.L[l]
+
     def link_set_is_empty(self):
         """
         :return: bool value of whether all links are empty
         """
-        return len(self.get_all_links()) == 0
+        return len(self.get_active_links()) == 0
 
     @staticmethod
     def num_intersection(list1, list2):
@@ -151,17 +190,20 @@ class Network:
         """
         return len(set(list1).intersection(list2))
 
+    def has_shared_flows(self, link1, link2):
+        return self.num_intersection(self.get_flows(link1, active=False),
+                                     self.get_flows(link2, active=False)) > 0
+
     def calc_delta(self, ad_rate_dict, removed_link_set):
         """
         See definition 25 in lexicographic paper
         """
         delta_l = {}
-        remaining_links = set(self.get_all_links()) - set(removed_link_set)
+        remaining_links = set(self.get_active_links()) - set(removed_link_set)
         for link_i in remaining_links:
             delta_l[link_i] = set()
             for link_j in removed_link_set:
-                if self.num_intersection(self.get_flows(link_i), self.get_flows(link_j)) > 0 and ad_rate_dict[link_j] < \
-                        ad_rate_dict[link_i]:
+                if self.has_shared_flows(link_i, link_j) and ad_rate_dict[link_j] < ad_rate_dict[link_i]:
                     delta_l[link_i].add(link_j)
 
         return delta_l
@@ -171,15 +213,16 @@ class Network:
         See definition 26 in lexicographic paper
         """
         i_l = {}
-        remaining_links = set(self.get_all_links()) - set(removed_link_set)
+        remaining_links = set(self.get_active_links()) - set(removed_link_set)
         for link_i in remaining_links:
             i_l[link_i] = set()
             for link_j in removed_link_set:
-                if self.num_intersection(self.get_flows(link_i), self.get_flows(link_j)) == 0:
-                    for link_k in remaining_links:  # ensures link_k not moved in this round
-                        if self.num_intersection(self.get_flows(link_i), self.get_flows(link_k)) > 0 \
-                                and self.num_intersection(self.get_flows(link_j), self.get_flows(link_k)) > 0 \
-                                and ad_rate_dict[link_k] < ad_rate_dict[link_i]: i_l[link_i].add(link_j)
+                if self.has_shared_flows(link_i, link_j):
+                    continue
+                for link_k in remaining_links:  # ensures link_k not moved in this round
+                    share_ind_flow = self.has_shared_flows(link_i, link_k) and self.has_shared_flows(link_j, link_k)
+                    if share_ind_flow and ad_rate_dict[link_k] < ad_rate_dict[link_i]:
+                        i_l[link_i].add(link_j)
         return i_l
 
 
@@ -189,25 +232,26 @@ def calc_bpg(network):
     :param network: it accepts a Network object as defined above
     :return: 5 values:
         1) the bpg level of the network
-        2) bpg vertices, see below for format
-        3) bpg direct links, see below for format
-        4) bpg indirect links, see below for format
-        5) expected flow rates, format = [{'flows': {f1...fn}, 'rate': r}, ...] which means f1...fn have expected rate
-           of r
+        2) bpg vertices, format = {level: {link_idx: R}}
+        3) bpg direct links, format = {upper level: [(link_src,link_dst)]}
+        4) bpg indirect links, format = {upper level: [(link_src,link_dst)]}
+        5) expected flow rates, format = {flow_id (sorted): flow_rate}
     """
     level = 1
-    bpg_v = {}  # bpg vertices, format = {level: [{link_idx: R}]}
-    bpg_e_dir = {}  # direct precedent links, format = {upper level: [(link_src,link_dst)]}
-    bpg_e_indir = {}  # indirect precedent links, format = {upper level: [(link_src,link_dst)]}
-    flow_rates = []
+    bpg_v = {}  # bpg vertexes, format = {level: {link_idx: R}}
+    bpg_edge_dir = {}  # direct precedent links, format = {upper level: [(link_src,link_dst)]}
+    bpg_edge_indir = {}  # indirect precedent links, format = {upper level: [(link_src,link_dst)]}
+    flow_rates = {}
     # initialize DELTA, I
-    all_links = network.get_all_links()
-    delta_all = {
-        0: {link_idx: set() for link_idx in all_links}}  # {level: {link_idx: Potential Direct Precedent Links}}
-    i_all = {0: {link_idx: set() for link_idx in all_links}}  # {level: {link_idx: Potential Indirect Precedent Links}}
+    all_links = network.get_active_links()
+    # Format: {level: {link_idx: Potential Direct Precedent Links}}
+    delta_all = {0: {link_idx: set() for link_idx in all_links}}
+
+    # Format: {level: {link_idx: Potential Indirect Precedent Links}}
+    i_all = {0: {link_idx: set() for link_idx in all_links}}
 
     while True:
-        all_links = network.get_all_links()
+        all_links = network.get_active_links()
 
         rate_dict = {}
         advertised_rates_dict = {}
@@ -216,32 +260,43 @@ def calc_bpg(network):
             rate_dict[link_idx] = {flow: rate for flow, rate in zip(network.get_flows(link_idx), r)}
             advertised_rates_dict[link_idx] = ad_rate
 
+        # Removing links and flows
         removed_link_set = set()
-        flow_set_to_skip = set()
+        # excluded_link_set = set()
+        L_copy = deepcopy(network.L)
+        F_copy = deepcopy(network.F)
+        while True:
+            remaining_link_set = network.get_active_links()
+            if len(remaining_link_set) == 0:
+                break
 
-        for link_idx in all_links:
-            connected_links = network.get_connected_links(link_idx)
-            if advertised_rates_dict[link_idx] == np.min([advertised_rates_dict[l] for l in connected_links]):  # TODO
-                for l in connected_links:  # 3.1 update cap
-                    for shared_flow in set(network.get_flows(link_idx)).intersection(network.get_flows(l)):
-                        if shared_flow not in flow_set_to_skip:
-                            for link in network.get_links(shared_flow):
-                                network.update_capacity(link, -rate_dict[link_idx][shared_flow])
-                            flow_set_to_skip.add(shared_flow)
+            for link_idx in remaining_link_set:
+                # connected_links = network.get_connected_links(link_idx)
+                connected_links = network.get_connected_links(link_idx, L=L_copy, F=F_copy)
+                min_ad_rate = np.min([advertised_rates_dict[l] for l in connected_links])
+                if np.isclose(advertised_rates_dict[link_idx], min_ad_rate):
+                    # Adding flow rate information
+                    flow_rates.update(rate_dict[link_idx])
+                    removed_link_set.add(link_idx)
 
-                removed_link_set.add(link_idx)
+                    # 3.1 remove links/flows; update cap; update excluded link set
+                    network.remove_link_flows_update_cap(link_idx, rate_dict[link_idx])
 
-                if level not in bpg_v.keys():  # 3.3 add to record
-                    bpg_v[level] = []
-                bpg_v[level].append({link_idx: advertised_rates_dict[link_idx]})
-                for shared_link in delta_all[level - 1][link_idx]:
-                    if level - 1 not in bpg_e_dir.keys():
-                        bpg_e_dir[level - 1] = []
-                    bpg_e_dir[level - 1].append((shared_link, link_idx))
-                for shared_link in i_all[level - 1][link_idx]:
-                    if level - 1 not in bpg_e_indir.keys():
-                        bpg_e_indir[level - 1] = []
-                    bpg_e_indir[level - 1].append((shared_link, link_idx))
+                    if level not in bpg_v.keys():  # 3.3 add to record
+                        bpg_v[level] = {}
+                    bpg_v[level][link_idx] = advertised_rates_dict[link_idx]
+                    for shared_link in delta_all[level - 1][link_idx]:
+                        if level - 1 not in bpg_edge_dir.keys():
+                            bpg_edge_dir[level - 1] = []
+                        bpg_edge_dir[level - 1].append((shared_link, link_idx))
+                    for shared_link in i_all[level - 1][link_idx]:
+                        if level - 1 not in bpg_edge_indir.keys():
+                            bpg_edge_indir[level - 1] = []
+                        bpg_edge_indir[level - 1].append((shared_link, link_idx))
+
+                    break  # find the first link that has min ad rate, update remaining set, then continue
+            else:
+                break
 
         delta_l = network.calc_delta(advertised_rates_dict, removed_link_set)  # 4 calc delta and i
         i_l = network.calc_i(advertised_rates_dict, removed_link_set)
@@ -249,17 +304,8 @@ def calc_bpg(network):
         delta_all[level] = delta_l
         i_all[level] = i_l
 
-        flows_removed_at_level = set()
-        flow_rate_at_level = 0
-        for link_idx in removed_link_set:
-            flows_removed_at_level = flows_removed_at_level.union(network.get_flows(link_idx))
-            flow_rate_at_level = advertised_rates_dict[link_idx]
-            network.remove_link_and_flows(link_idx)  # 3.2 remove
-        flow_rates.append({"flows": flows_removed_at_level, "rate": flow_rate_at_level})
-
         if network.link_set_is_empty():
             break
-
         level += 1
 
-    return level, bpg_v, bpg_e_dir, bpg_e_indir, flow_rates
+    return level, bpg_v, bpg_edge_dir, bpg_edge_indir, OrderedDict(sorted(flow_rates.items(), key=lambda x: int(x[0])))

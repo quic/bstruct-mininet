@@ -13,6 +13,7 @@ import json
 import os
 from itertools import combinations
 import operator
+from mininet.log import info
 
 def writeAdjList(mnet, outfile):
     """Generate adjacency list for a graph given by a Mininet topology and write it to an output file.
@@ -27,13 +28,14 @@ def writeAdjList(mnet, outfile):
     G = nx.Graph(allLinks)
     nx.write_adjlist(G, outfile)
 
-def generateShortestPaths(adjfile, outfile, trafficEndPoints, configuredLinks):
+def generatePaths(adjfile, outfile, trafficEndPoints, traversedNodes, configuredLinks):
     """Generate shortest path between each pair of nodes of a graph represented by its adjacency list.
 
     Args:
         adjfile (str): Path to a file containing adjacency list of a graph.
         outfile (str): Output file path.
         trafficEndPoints (list): List of traffic flow end points (src_host, dst_host).
+        traversedNodes (list): List of traversed nodes for each specified flow path.
         configuredLinks (list): List of tuples, each representing a user-specified non-default link.
 
     Returns:
@@ -56,27 +58,40 @@ def generateShortestPaths(adjfile, outfile, trafficEndPoints, configuredLinks):
 
     # Enforce to choose shortest paths which traverse the configured links, wherever applicable.
     # ['src']['dst'][idx] -> number_of_configured_links
-    pathDict = {}
-    for tSrc,tDst in trafficEndPoints:
-        if tSrc not in pathDict:
-            pathDict[tSrc] = dict()
-        pathDict[tSrc][tDst] = defaultdict(int)
-        srcDstPaths = [p for p in nx.all_shortest_paths(G, tSrc, tDst)]
-        for idx, pth in enumerate(srcDstPaths):
-            for bSrc, bDst in configuredLinks:
-                try:
-                    if abs(pth.index(bSrc) - pth.index(bDst)) == 1: # configured link (bSrc,bDst) is present on path 'pth'
-                        pathDict[tSrc][tDst][idx] += 1
-                except ValueError:
-                    # ValueError occurs when configured link is not part of any of the shortest paths.
-                    continue
-        # Get the path having max configured link on it.
-        # Which means -- get key with max value in dictionary pathDict[tSrc][tDst].
-        maxIdx = max(pathDict[tSrc][tDst].iteritems(), key=operator.itemgetter(1))[0]
-        pth = srcDstPaths[maxIdx]
-        paths[tSrc][tDst] = pth
-        # Again, set the reverse path.
-        paths[tDst][tSrc] = pth[::-1]
+    if configuredLinks:
+        pathDict = {}
+        for job_id, (nodes, (tSrc,tDst)) in enumerate(zip(traversedNodes, trafficEndPoints)):
+            if tSrc not in pathDict:
+                pathDict[tSrc] = dict()
+            pathDict[tSrc][tDst] = defaultdict(int)
+            
+            # If the specified path is not 'N/A' and the specified path is a simple path, use the specified path
+            useShortestPath = True
+            if 'N/A' not in nodes:
+                srcDstPaths = [p for p in nx.shortest_simple_paths(G, tSrc, tDst)]
+                if nodes in srcDstPaths:
+                    pth = nodes
+                    useShortestPath = False
+                else:
+                    info("**** [G2]: The specified path for flow %d is not a simple path; will use a shortest path \n" %(job_id))
+            
+            if useShortestPath:
+                srcDstPaths = [p for p in nx.all_shortest_paths(G, tSrc, tDst)]
+                for idx, pth in enumerate(srcDstPaths):
+                    for bSrc, bDst in configuredLinks:
+                        try:
+                            if abs(pth.index(bSrc) - pth.index(bDst)) == 1: # configured link (bSrc,bDst) is present on path 'pth'
+                                pathDict[tSrc][tDst][idx] += 1
+                        except ValueError:
+                            # ValueError occurs when configured link is not part of any of the shortest paths.
+                            continue
+                # Get the path having max configured link on it.
+                # Which means -- get key with max value in dictionary pathDict[tSrc][tDst].
+                maxIdx = max(pathDict[tSrc][tDst].items(), key=operator.itemgetter(1))[0]
+                pth = srcDstPaths[maxIdx]
+            paths[tSrc][tDst] = pth
+            # Again, set the reverse path.
+            paths[tDst][tSrc] = pth[::-1]
 
     with open(outfile, "w") as write_file:
         json.dump(paths, write_file, indent=1, sort_keys=False)
@@ -196,7 +211,7 @@ def getG2Inputs(conf, mnet):
     # linkID -> [linkStr]. Example, {'l1': 's1-s2'}.
     L = conf.topoData['L']
     # [linkStr] -> linkID. Example, {'s1-s2': 'l1'}.
-    reverseL = dict((v,k) for k,v in L.iteritems())
+    reverseL = dict((v,k) for k,v in L.items())
     # Dictionary to hold flow information and RTT.
     flowInfo = {}
 

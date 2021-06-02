@@ -18,7 +18,7 @@ from mininet.link import TCLink
 from mininet.node import CPULimitedHost
 from mininet.clean import cleanup
 
-import ConfigParser
+import configparser
 import argparse
 import os
 from time import time, sleep
@@ -35,7 +35,7 @@ import struct
 from requests import put
 
 from g2Topo import G2Topo
-from util.topoGraphUtil import writeAdjList, generateShortestPaths, generateRoutingConf, readFromPathFile, getPathFeasibility, getG2Inputs
+from util.topoGraphUtil import writeAdjList, generatePaths, generateRoutingConf, readFromPathFile, getPathFeasibility, getG2Inputs
 from util.traceParser import TraceParser
 from util.resultsProcessing import ResultGenerator
 from util.monitor import Monitor
@@ -48,7 +48,7 @@ CONTROLLER_PORT = 6633
 # Constants for file-names and paths.
 G2_CONF = "g2.conf"
 TRAFFIC_CONF = "traffic.conf"
-SHORTEST_PATH_FILE = "shortest_paths.json"
+PATH_FILE = "input_routing.json"
 BENCHMARK_PATH = "benchmarks"
 
 def generateIPAddress(base, subnet, host, mask):
@@ -121,11 +121,20 @@ class ConfigHandler:
     """
 
     def __init__(self, inputPath, outPath):
-        self.config = ConfigParser.ConfigParser()
+        self.config = configparser.ConfigParser()
         try:
-            self.config.read(os.path.join(inputPath, G2_CONF))
-        except ConfigParser.ParsingError, err:
-            info("**** [G2]: could not parse config; exiting....\n", err, "\n")
+            file_name = os.path.join(inputPath, G2_CONF)
+            if not os.path.isfile(file_name):
+                raise FileNotFoundError("**** [G2]: could not find config file from path {}; exiting....\n".format(file_name))
+            self.config.read(file_name)
+    
+        except FileNotFoundError as err:
+            info(str(err))
+            self.config = None
+            return
+
+        except configparser.ParsingError as err:
+            info("**** [G2]: could not parse config; error message: {}; exiting....\n".format(err))
             self.config = None
             return
 
@@ -142,6 +151,7 @@ class ConfigHandler:
         self.isDebug = int(generalDict['debug'])
         self.isCLI = int(generalDict['start_cli'])
         self.ccAlgo = generalDict['tcp_congestion_control']
+        self.iperfVer = int(generalDict['iperf_version'])
         self.adjacencyFile = os.path.join(outPath, generalDict['adjacency_list_outfile'])
         self.routingConf = os.path.join(outPath, generalDict['routing_conf_outfile'])
 
@@ -270,7 +280,7 @@ class ConfigHandler:
         try:
             options = configObj.options(sectionName)
         except Exception as e:
-            info("**** [G2]: ConfigParser exception; exiting....\n", e, "\n")
+            info("**** [G2]: configparser exception; exiting....\n", e, "\n")
             return {}
 
         for option in options:
@@ -430,6 +440,15 @@ class NetworkSimulator:
             autoStaticArp=True,
             link=link)
 
+        for h in net.hosts:
+            h.cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")
+            h.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
+            h.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
+        for sw in net.switches:
+            sw.cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")
+            sw.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
+            sw.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
+
         # Create a default route for each host.
         # Turn on tcpdump on each host if debug mode is on.
         for hs in topo.hosts():
@@ -447,9 +466,11 @@ class NetworkSimulator:
         """
 
         trafficEndPoints = []
+        traversedNodes = []
         # A job denotes a traffic flow, which corresponds to an iperf task.
         for job in self.config.trace.jobs:
             trafficEndPoints.append((job['src'], job['dst']))
+            traversedNodes.append(job['traversedNodes'])
 
         # Obtain details about user-specified non-default links.
         configuredLinks = []
@@ -464,8 +485,8 @@ class NetworkSimulator:
             writeAdjList(self.net, adjFile)
             info("**** [G2]: adjacency list written to file", adjFile, "\n")
 
-            outfile = os.path.join(self.config.outPath, SHORTEST_PATH_FILE)
-            paths = generateShortestPaths(adjFile, outfile, trafficEndPoints, configuredLinks)
+            outfile = os.path.join(self.config.outPath, PATH_FILE)
+            paths = generatePaths(adjFile, outfile, trafficEndPoints, traversedNodes, configuredLinks)
             info("**** [G2]: shortest paths written to file", outfile, "\n")
             # Note: Since there can be multiple shortest paths between two endpoints, solution could vary.
         elif ".json" in spec:
@@ -564,7 +585,7 @@ class NetworkMonitor:
         s.close()
         for i in range(0, outbytes, struct_size):
             # In each 40 bytes long entry, the first 16 bytes are the name string, the 20th-24th bytes are IP address octet strings in byte form - one for each byte.
-            name = namestr[i:i+16].split('\0', 1)[0]
+            name = namestr[i:i+16].decode('utf8').split('\0', 1)[0]
             addr = socket.inet_ntoa(namestr[i+20:i+24])
             if addr == ip:
                 return (name, addr)
@@ -677,7 +698,10 @@ class NetworkMonitor:
 
             procs = []
             for j in jobs:
-                p = Process(target=self.launchIperf, args=(j,))
+                if self.config.iperfVer == 2:
+                    p = Process(target=self.launchIperf2, args=(j,))
+                if self.config.iperfVer == 3:
+                    p = Process(target=self.launchIperf3, args=(j,))                
                 procs.append(p)
                 p.start()
 
@@ -688,13 +712,13 @@ class NetworkMonitor:
             simTime = end-now
             info("**** [G2]: iperf test done successfully in %.2f" %simTime, "sec\n")
             with open(os.path.join(self.config.benchPath, "%s_experiment_duration.csv" %self.config.prefix), "w") as fd:
-                fd.write("simulation duration, slowest flow duration\n")
+                fd.write("simulation duration, slowest flow duration, theoretical slowest flow duration\n")
                 fd.write("%.2f," %simTime)
         else:
             info("**** [G2]: no flow found, iperf test unsuccessful \n")
 
-    def launchIperf(self, job):
-        """Prepare arguments and launch 'iperf' to measure bandwidth using iperf along a traffic flow.
+    def launchIperf2(self, job, counter = 0):
+        """Prepare arguments and launch 'iperf2' to measure bandwidth using iperf along a traffic flow.
         Per flow, results are written to two files in ./benchmarks directory:
         <perfix>_iperf_server_<job id>.txt and <prefix>_iperf_client_<job id>.txt.
 
@@ -708,6 +732,7 @@ class NetworkMonitor:
         client = self.net.getNodeByName(job['src'])
         server = self.net.getNodeByName(job['dst'])
         size = job['size']
+
         # Since there could be multiple flows destined to the same server at the same time, we make sure same port is not used multiple times.
         serverPort = 5001 + jobID
 
@@ -725,16 +750,117 @@ class NetworkMonitor:
         while (not cmdOut) or ('iperf' not in cmdOut):
             debug("**** [G2]: traffic-flow %d waiting for iperf server to start on host %s\n" %(jobID, job['dst']))
             cmdOut = server.cmd("sudo lsof -i -P -n | grep LISTEN | grep %d" %serverPort)
-
+        
+        if self.config.isPingAll == 2:
+            pingLog = open(os.path.join(self.config.benchPath, "%s_ping_%d.txt" %(pfx, jobID)), "w")
+            popenPing = server.popen('ping -D -i %s %s' % (self.config.frequency, client.IP()), stdout=pingLog, stderr=STDOUT)
+            
         fsClnt = open(os.path.join(self.config.benchPath, "%s_iperf_client_%d.txt" %(pfx, jobID)), "w")
         popenClnt = client.popen('iperf -c %s -p %d -i %f -n %f -Z %s' % (server.IP(), serverPort, intervalSec, size, ccAlgo), stdout=fsClnt, stderr=STDOUT) # Or, sys.stdout
         retCode = popenClnt.wait()
-
+        
+        fname = os.path.join(self.config.benchPath, "%s_iperf_client_%d.txt" %(pfx, jobID))
+        fail = False
+        with open(fname) as fs:
+            fileContent = fs.read()
+            if "connect failed" in fileContent:
+                fail = True
+        
+        if not fail:
+            debug("Successfully started iperf client of job {}\n".format(jobID))
+        elif counter >= 50:
+            info("Retried too many times, giving up starting iperf client of job {}\n".format(jobID))   
+        else:
+            info("Retrying job (ID = {})\n".format(jobID))
+            self.launchIperf2(job, counter + 1)
+        
         # Once client popen returns, wait for a small duration to allow the server receive all the traffic, and forcefully terminate server.
         sleep(.100) # 100 milliseconds
         popenSrv.kill()
-        fsSrv.close()
-        fsClnt.close()
+            
+        if self.config.isPingAll == 2:
+            popenPing.kill()
+            pingLog.close()
+        
+        debug("**** [G2]: iperf done; flow ID:%d, src:%s, dst:%s; client iperf return code:%s\n" %(jobID, job['src'], job['dst'], retCode))
+
+    def launchIperf3(self, job, counter = 0):
+        """Prepare arguments and launch 'iperf3' to measure bandwidth using iperf along a traffic flow.
+        Per flow, results are written to two files in ./benchmarks directory:
+        <perfix>_iperf_server_<job id>.txt and <prefix>_iperf_client_<job id>.txt.
+
+        Args:
+            job (dict): Dictionary specification of each flow (as defined in TraceParser.jobs).
+
+        """
+
+        sleep(job['time'])
+        jobID = job['id']
+        client = self.net.getNodeByName(job['src'])
+        server = self.net.getNodeByName(job['dst'])
+        size = job['size']
+        dscp =  job['dscp']
+        bitrate = job['bitrate']
+        transport = job['transport']
+        # Since there could be multiple flows destined to the same server at the same time, we make sure same port is not used multiple times.
+        serverPort = 5001 + jobID
+
+        # 'iperf' supports minimum interval 0.5. Smaller values would default to 0.5.
+        # Also, for values greater than 0.5, only one digit after decimal point is supported.
+        # Such values will be rounded to nearest supported value, e.g. 1.67 -> 1.7
+        intervalSec = self.config.frequency
+        pfx = self.config.prefix
+        ccAlgo = self.config.ccAlgo
+
+        fsSrv = os.path.join(self.config.benchPath, "%s_iperf_server_%d.txt" %(pfx, jobID))
+        if os.path.exists(fsSrv):
+            os.remove(fsSrv)
+        popenSrv = server.popen('iperf3 -s -p %d -i %f --logfile %s' %(serverPort, intervalSec, fsSrv), stderr=STDOUT) # Or, sys.stdout
+        # Wait until server port is listening.
+        cmdOut = server.cmd("sudo lsof -i -P -n | grep LISTEN | grep %d" %serverPort)
+        while (not cmdOut) or ('iperf3' not in cmdOut):
+            debug("**** [G2]: traffic-flow %d waiting for iperf server to start on host %s\n" %(jobID, job['dst']))
+            cmdOut = server.cmd("sudo lsof -i -P -n | grep LISTEN | grep %d" %serverPort)
+        
+        if self.config.isPingAll == 2:
+            pingLog = open(os.path.join(self.config.benchPath, "%s_ping_%d.txt" %(pfx, jobID)), "w")
+            popenPing = server.popen('ping -D -i %s %s' % (self.config.frequency, client.IP()), stdout=pingLog, stderr=STDOUT)
+            
+        fsClnt = os.path.join(self.config.benchPath, "%s_iperf_client_%d.txt" %(pfx, jobID))
+        if os.path.exists(fsClnt):
+            os.remove(fsClnt)
+        ClntCmd = 'iperf3 -c %s -p %d -i %f -n %f -Z %s --logfile %s' % (server.IP(), serverPort, intervalSec, size, ccAlgo, fsClnt)
+        if dscp != 'N/A':
+            ClntCmd += ' --dscp %s'% (dscp)
+        if bitrate != 'N/A':
+            ClntCmd += ' -b %s'% (bitrate)
+        if transport == 'UDP':
+            ClntCmd += ' -u'
+        popenClnt = client.popen(ClntCmd, stderr=STDOUT) # Or, sys.stdout
+        retCode = popenClnt.wait()
+
+        fail = False
+        with open(fsClnt) as fs:
+            fileContent = fs.read()
+            if "iperf3: error" in fileContent:
+                fail = True
+        
+        if not fail:
+            debug("Successfully started iperf client of job {}".format(jobID))
+        elif counter >= 50:
+            info("Retried too many times, giving up starting iperf client of job {}".format(jobID))   
+        else:
+            info("Retrying job (ID = {})".format(jobID))
+            self.launchIperf3(job, counter + 1)
+        
+        # Once client popen returns, wait for a small duration to allow the server receive all the traffic, and forcefully terminate server.
+        sleep(.100) # 100 milliseconds
+        popenSrv.kill()
+            
+        if self.config.isPingAll == 2:
+            popenPing.kill()
+            pingLog.close()
+        
         debug("**** [G2]: iperf done; flow ID:%d, src:%s, dst:%s; client iperf return code:%s\n" %(jobID, job['src'], job['dst'], retCode))
 
     def monitoredInterfaceList(self):
@@ -753,6 +879,10 @@ class NetworkMonitor:
         specLinks = parseConfStr(confStr)
         topo = self.net.topo
         topoLinks = topo.iterLinks()
+        if specLinks == []:
+            for s,d in topo.links():
+                if topo.isSwitch(s) and topo.isSwitch(d):
+                    specLinks.append((s,d))
         for s,d in specLinks:
             if (s,d) in topoLinks and topo.isSwitch(s) and topo.isSwitch(d):
                 ifs.append('%s-eth%d' %(d, topo.port(s,d)[1]))
@@ -883,10 +1013,14 @@ def main():
         return
     # Process iperf output and generate results.
     rg = ResultGenerator(ch, C, F, flowInfo)
-    results = rg.parseIperfOutput()
+    if ch.iperfVer == 2:
+        results = rg.parseIperfOutput_iperf2()
+    elif ch.iperfVer == 3:
+        results = rg.parseIperfOutput_iperf3()
     slowestTime = rg.getMaxCompletionTime(results)
+    theoreticalSlowestTime = rg.getMaxTheoreticalCompletionTime()
     with open(os.path.join(ch.benchPath, "%s_experiment_duration.csv" %ch.prefix), "a") as fd:
-        fd.write("%.2f\n" %slowestTime)
+        fd.write("%.2f,%.2f\n" %(slowestTime, theoreticalSlowestTime))
     rg.writeToJson(results)
     rg.writeToCsv(results)
     rg.plotResults(results)

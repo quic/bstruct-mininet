@@ -1,0 +1,1 @@
+# This is folded-clos experiment in issue 98 (https://github.com/reservoirlabs/g2-mininet-dev/issues/98). The experiment configurations are k=4, tapering = 1.0, skewness ranges from 0.05 to 0.95.

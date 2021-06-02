@@ -17,7 +17,7 @@ Example: python jainsFairnessIndex.py -r ../examples/g2_network1/output/benchmar
 import numpy as np
 import argparse
 import json
-from traceParser import TraceParser
+from .traceParser import TraceParser
 
 def calculateJainsIndex(rates, expectedRates):
     """Compute Jain's fairness index.
@@ -57,10 +57,10 @@ def main():
     flows = trace.jobs
 
     if not results:
-        print "Error in reading experiment results."
+        print("Error in reading experiment results.")
         return
     if not flows:
-        print "Error in reading traffic conf."
+        print("Error in reading traffic conf.")
         return
 
     experimentRates = []
@@ -71,7 +71,7 @@ def main():
             if flow['id'] == flowID:
                 expectedRates.append(flow['share'])
 
-    print("Jain's fairness index: %f" %calculateJainsIndex(experimentRates, expectedRates))
+    print("Jain's fairness index: {}".format(calculateJainsIndex(experimentRates, expectedRates)))
 
 if __name__ == "__main__":
     main()

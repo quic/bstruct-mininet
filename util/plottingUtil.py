@@ -14,8 +14,8 @@ import sys
 from mininet.clean import cleanup
 
 sys.path.append("../")
-from topoGraphUtil import getG2Inputs
-from resultsProcessing import ResultGenerator
+from .topoGraphUtil import getG2Inputs
+from .resultsProcessing import ResultGenerator
 from g2Launcher import ConfigHandler, NetworkSimulator
 
 def parse():
@@ -34,16 +34,19 @@ def parse():
     parser.add_argument("-xmax", "--xmax", type=int, default=-1, help="xaxis right value, must be an integer greater than or equal to -1, where -1 means the axis is set to it's default value")
     parser.add_argument("-ymin", "--ymin", type=int, default=-1, help="yaxis bottom value, must be an integer greater than or equal to -1, where -1 means the axis is set to it's default value")
     parser.add_argument("-ymax", "--ymax", type=int, default=-1, help="yaxis top value, must be an integer greater than or equal to -1, where -1 means the axis is set to it's default value")
+    parser.add_argument("--no-legend", action="store_false", help="Whether to remove legend")
+    parser.add_argument("--sample", type=int, default=1, help="Interval for sampling the collected data")
     args = parser.parse_args()
 
 def main():
+    cleanup()
 
     # Parse command-line arguments.
     parse()
 
     # Validate xaxis and yaxis input values.
     if args.xmin < -1 or args.xmax < -1 or args.ymin < -1 or args.ymax < -1:
-        print "Invalid values entered for axis limits. View help using -h."
+        print("Invalid values entered for axis limits. View help using -h.")
         return
     xlimits = (args.xmin, args.xmax)
     ylimits = (args.ymin, args.ymax)
@@ -51,7 +54,7 @@ def main():
     ch = ConfigHandler(args.input, args.output)
     # If there is an exception in config parsing, ch.config will be None.
     if not ch.config:
-        print "Error while reading config; exiting...\n"
+        print("Error while reading config; exiting...\n")
         return
 
     # Simulate network.
@@ -67,9 +70,10 @@ def main():
     # Generate throughput plots using specified axis range.
     # Plot throughput of unique flows with custom axis range.
     numPlots = args.num_unique_plots
-    rg.plotUniqueInstances(iperfResults, numPlots, xlimits, ylimits)
+    # rg.plotUniqueInstances(iperfResults, numPlots, xlimits, ylimits)
     # Plot average throughput of unique flows with custom axis range.
-    rg.plotAvgFlows(iperfResults, xlimits, ylimits)
+    # rg.plotAvgFlows(iperfResults, xlimits, ylimits)
+    rg.plotResults(iperfResults, use_legend=args.no_legend, sample_data_n = args.sample)
     # Clean Mininet.
     cleanup()
 

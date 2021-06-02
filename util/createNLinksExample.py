@@ -61,8 +61,8 @@ def parse_cmdline_args():
 
     config_read = vars(parser.parse_args())
     if config_read['links'] > 8 and os.path.basename(config_read['test'].rstrip('/')) == 'g2_network10':
-        print "ERROR: Cannot support more than 8 links with this base configuration. "\
-              "Exceeding 8 links could violate Mininet's 1Gbps maximum link capacity limit."
+        print("ERROR: Cannot support more than 8 links with this base configuration. "\
+              "Exceeding 8 links could violate Mininet's 1Gbps maximum link capacity limit.")
         exit(1)
     return config_read
 
@@ -169,9 +169,9 @@ def main():
     # Create a fresh directory to hold all the examples, 'g2_example_nlevel' by default.
     outDir = os.path.join(os.curdir, EXAMPLE_BASEDIR)
     if not os.path.isdir(outDir):
-        print "%s directory not present. Creating it..."%(os.path.abspath(outDir))
+        print("{} directory not present. Creating it...".format(os.path.abspath(outDir)))
         os.makedirs(outDir)
-    print "Creating configuration for: %d links, with scaling of %s."%(maxLinks, scale_factors)
+    print("Creating configuration for: {} links, with scaling of {}.".format(maxLinks, scale_factors))
 
     # Prepare the name and path of new example network, e.g. g2_example_nlevel/10x_3links_bbr/.
     for scale in scale_factors:

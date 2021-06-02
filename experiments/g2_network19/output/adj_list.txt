@@ -1,0 +1,17 @@
+#g2Launcher.py -i /home/mininet/mininet/g2-mininet/examples/exp4_bbr/input/ -o /home/mininet/mininet/g2-mininet/examples/exp4_bbr/output/
+# GMT Thu Feb 13 21:07:58 2020
+# 
+h5 s5
+h3 s3
+s3 s1 s7 s6
+s7 h7
+s1 s2 h1
+h1
+h6 s6
+h7
+s5 s2
+s6
+h2 s2
+h4 s4
+s2 s4
+s4

@@ -18,7 +18,7 @@ from pox.lib.packet.arp import arp
 from pox.lib.addresses import IPAddr, EthAddr
 from pox.lib.revent import *
 
-import ConfigParser
+import configparser
 from collections import defaultdict
 import json
 
@@ -73,7 +73,7 @@ class StaticRouter():
         """
 
         rulesDict = defaultdict(list)
-        Config = ConfigParser.ConfigParser()
+        Config = configparser.ConfigParser()
         if Config.read(self.config):
             switches = Config.sections() # ['s1', 's2', 's3', ...]
             if switches:

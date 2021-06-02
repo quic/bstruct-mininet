@@ -22,7 +22,8 @@ import time
 # Globals
 # Regular expression to parse iperf output.
 ipRegex = re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
-timeRegex = re.compile(r"\d+\.\d+-\s?\d+\.\d+\ssec")
+timeRegex2 = re.compile(r"\d+\.\d+-\s?\d+\.\d+\ssec")
+timeRegex3 = re.compile(r"\d+\.\d+\-\d+\.\d+\s+sec")
 
 # Multiplication factors for converting data units.
 # Todo: Future work- (low priority): check for other possible units.
@@ -79,8 +80,8 @@ class ResultGenerator:
         self.L = config.topoData['L']
         self.flowInfo = flowInfo
 
-    def parseIperfOutput(self):
-        """For a list of flows, parses iperf output from 'outPath' directory.
+    def parseIperfOutput_iperf2(self):
+        """For a list of flows, parses iperf2 output from 'outPath' directory.
         Parsing logic is highly based on the output format of iperf.
         Generates a dictionary that can be easily processed to compute statistics and plot graphs.
 
@@ -102,9 +103,11 @@ class ResultGenerator:
             iperfResults[fid]['senderTs'] = []
             iperfResults[fid]['senderMbps'] = []
             iperfResults[fid]['senderAvgMbps'] = 0.0
+            iperfResults[fid]['senderAvgMbpsActual'] = 0.0
             iperfResults[fid]['receiverTs'] = []
             iperfResults[fid]['receiverMbps'] = []
             iperfResults[fid]['receiverAvgMbps'] = 0.0
+            iperfResults[fid]['receiverAvgMbpsActual'] = 0.0
             iperfResults[fid]['receiverMBytes'] = []
             iperfResults[fid]['receiverTotalMBytes'] = 0.0
             iperfResults[fid]['completionTime'] = 0.0
@@ -125,8 +128,8 @@ class ResultGenerator:
                     elif "Server listening on TCP port" in line:
                         isServer = True
 
-                    if timeRegex.search(line):
-                        ts = timeRegex.findall(line)[0] # '0.0- 1.0 sec' OR '9.0-10.0 sec'
+                    if timeRegex2.search(line):
+                        ts = timeRegex2.findall(line)[0] # '0.0- 1.0 sec' OR '9.0-10.0 sec'
                         startSec = float(ts.split('-')[0].strip())
                         endSec = ts.split('-')[1].strip()
                         endSec = float(endSec[:-3].strip()) # Remove substring 'sec' from end.
@@ -168,7 +171,167 @@ class ResultGenerator:
                     iperfResults[fid]['receiverMBytes'] = sizeReadings
                     iperfResults[fid]['receiverTotalMBytes'] = np.sum(sizeReadings)
                     iperfResults[fid]['completionTime'] = timeReadings[-1]
+        
+        # Actual avg bandwidths computation
+        maxStartTime = max([iperfResults[flow['id']]['receiverTs'][0] if len(iperfResults[flow['id']]['receiverTs']) > 0 else -1 for flow in self.jobs])
+        minEndTime = min([iperfResults[flow['id']]['receiverTs'][-1] if len(iperfResults[flow['id']]['receiverTs']) > 0 else 1000000 for flow in self.jobs])
+        if minEndTime > maxStartTime:
+            for flow in self.jobs:
+                fid = flow['id']
+                startIndex = -1
+                endIndex = -1
+                for (idx, readTime) in enumerate(iperfResults[fid]['receiverTs']):
+                    if readTime >= maxStartTime and startIndex == -1:
+                        startIndex = idx
+                    if readTime >= minEndTime and endIndex == -1:
+                        endIndex = idx - 1
+                    if endIndex != -1:
+                        break
+                iperfResults[fid]['senderAvgMbpsActual'] = np.mean(iperfResults[fid]['senderMbps'][startIndex : endIndex+1])
+                iperfResults[fid]['receiverAvgMbpsActual'] = np.mean(iperfResults[fid]['receiverMbps'][startIndex : endIndex+1])
+        else:
+            for flow in self.jobs:
+                fid = flow['id']
+                iperfResults[fid]['senderAvgMbpsActual'] = 'NaN'
+                iperfResults[fid]['receiverAvgMbpsActual'] = 'NaN'
+                
+        # Convergence time computation.
+        # Todo: Future work- better way of selecting window and threshold.
+        # Sliding window size, could be set to 10% of the time points, for example.
 
+        # Read parameters from config.
+        convTimeType = self.config.convTimeType
+        window = int(self.config.convWindow)
+        threshold = float(self.config.convThresh)
+        numSamples = int(self.config.convNumSamples)
+        if convTimeType == 'FS':
+            fairShares = [f['share'] for f in self.jobs]
+            convTimes = self.getFSConvergenceTime(iperfResults, fairShares, window, threshold)
+        elif convTimeType == 'No-FS':
+            convTimes = self.getConvergenceTime(iperfResults, window, numSamples, threshold)
+
+        for ID, t in convTimes:
+            iperfResults[ID]['convergenceTime'] = t
+
+        return iperfResults
+    
+    def parseIperfOutput_iperf3(self):
+        """For a list of flows, parses iperf3 output from 'outPath' directory.
+        Parsing logic is highly based on the output format of iperf.
+        Generates a dictionary that can be easily processed to compute statistics and plot graphs.
+
+        Returns:
+            dict: That contains, for each flow, its RTT, links traversed, and the useful statistics parsed from iperf output.
+
+        """
+
+        iperfResults = defaultdict(dict)
+        pfx = join(self.outPath, "%s_iperf_" %(self.prefix))
+
+        for flow in self.jobs:
+            fid = flow['id']
+            iperfResults[fid]['sender'] = flow['src']
+            iperfResults[fid]['receiver'] = flow['dst']
+            iperfResults[fid]['flowStr'] = self.flowInfo['f'+str(fid)]['flowStr']
+            iperfResults[fid]['links'] = self.flowInfo['f'+str(fid)]['links']
+            iperfResults[fid]['rtt'] = self.flowInfo['f'+str(fid)]['rtt']
+            iperfResults[fid]['senderTs'] = []
+            iperfResults[fid]['senderMbps'] = []
+            iperfResults[fid]['senderAvgMbps'] = 0.0
+            iperfResults[fid]['senderAvgMbpsActual'] = 0.0
+            iperfResults[fid]['receiverTs'] = []
+            iperfResults[fid]['receiverMbps'] = []
+            iperfResults[fid]['receiverAvgMbps'] = 0.0
+            iperfResults[fid]['receiverAvgMbpsActual'] = 0.0
+            iperfResults[fid]['receiverMBytes'] = []
+            iperfResults[fid]['receiverTotalMBytes'] = 0.0
+            iperfResults[fid]['completionTime'] = 0.0
+            iperfFiles = ["%sclient_%d.txt" %(pfx, fid), "%sserver_%d.txt" %(pfx, fid)]
+
+            for fname in iperfFiles:
+                isClient = False
+                isServer = False
+                timeReadings = []
+                sizeReadings = []
+                bwReadings = []
+                with open(fname) as fs:
+                    fileContent = fs.readlines()
+                isFirstLine = False
+                for line in fileContent:
+                    if "Connecting to host" in line:
+                        isClient = True
+                    elif "Server listening on" in line:
+                        isServer = True
+
+                    if timeRegex3.search(line):
+                        ts = timeRegex3.findall(line)[0] # '0.0- 1.0 sec' OR '9.0-10.0 sec'
+                        startSec = float(ts.split('-')[0].strip())
+                        endSec = ts.split('-')[1].strip()
+                        endSec = float(endSec[:-3].strip()) # Remove substring 'sec' from end.
+
+                        # Detect if the last line in the file is reporting cumulative stats of iperf run.
+                        # If so, we exclude the cumulative stats from the timeseries.
+                        # 'first line' has pattern "0.0- 'interval' sec"
+                        # 'last line' has pattern "0.0- 'max' sec", if it reports cumulative stats.
+                        if startSec == 0.0 and endSec > 0.0:
+                            if not isFirstLine:
+                                isFirstLine = True
+                            else: # 'last line'
+                                continue
+                        splits = line.strip().split() # Splits at one or more spaces.
+                        if len(splits) < 8: # The final line in the server file is incomplete
+                            continue 
+                        # Read size unit bw unit from split
+                        bwUnit = splits[7]
+                        MbitsPerSec = float(splits[6])
+                        MbitsPerSec = MbitsPerSec * factorToMbps[bwUnit]
+
+                        sizeUnit = splits[5]
+                        MBytes = float(splits[4])
+                        MBytes = MBytes * factorToMB[sizeUnit]
+
+                        if endSec != 0.0 or MBytes != 0.0 or MbitsPerSec != 0.0:
+                            timeReadings.append(endSec)
+                            sizeReadings.append(MBytes)
+                            bwReadings.append(MbitsPerSec)
+                # Store statistics to results.
+                if not timeReadings:
+                    continue
+                if isClient:
+                    iperfResults[fid]['senderTs'] = [t + flow['time'] for t in timeReadings]
+                    iperfResults[fid]['senderMbps'] = bwReadings
+                    iperfResults[fid]['senderAvgMbps'] = np.mean(bwReadings)
+                elif isServer:
+                    iperfResults[fid]['receiverTs'] = [t + flow['time'] for t in timeReadings]
+                    iperfResults[fid]['receiverMbps'] = bwReadings
+                    iperfResults[fid]['receiverAvgMbps'] = np.mean(bwReadings)
+                    iperfResults[fid]['receiverMBytes'] = sizeReadings
+                    iperfResults[fid]['receiverTotalMBytes'] = np.sum(sizeReadings)
+                    iperfResults[fid]['completionTime'] = timeReadings[-1]
+        
+        # Actual avg bandwidths computation
+        maxStartTime = max([iperfResults[flow['id']]['receiverTs'][0] if len(iperfResults[flow['id']]['receiverTs']) > 0 else -1 for flow in self.jobs])
+        minEndTime = min([iperfResults[flow['id']]['receiverTs'][-1] if len(iperfResults[flow['id']]['receiverTs']) > 0 else 1000000 for flow in self.jobs])
+        if minEndTime > maxStartTime:
+            for flow in self.jobs:
+                fid = flow['id']
+                startIndex = -1
+                endIndex = -1
+                for (idx, readTime) in enumerate(iperfResults[fid]['receiverTs']):
+                    if readTime >= maxStartTime and startIndex == -1:
+                        startIndex = idx
+                    if readTime >= minEndTime and endIndex == -1:
+                        endIndex = idx - 1
+                    if endIndex != -1:
+                        break
+                iperfResults[fid]['senderAvgMbpsActual'] = np.mean(iperfResults[fid]['senderMbps'][startIndex : endIndex+1])
+                iperfResults[fid]['receiverAvgMbpsActual'] = np.mean(iperfResults[fid]['receiverMbps'][startIndex : endIndex+1])
+        else:
+            for flow in self.jobs:
+                fid = flow['id']
+                iperfResults[fid]['senderAvgMbpsActual'] = 'NaN'
+                iperfResults[fid]['receiverAvgMbpsActual'] = 'NaN'
+                
         # Convergence time computation.
         # Todo: Future work- better way of selecting window and threshold.
         # Sliding window size, could be set to 10% of the time points, for example.
@@ -297,10 +460,10 @@ class ResultGenerator:
         # CSV file for average and cumulative stats.
         csvFile = join(self.outPath, "%s_avg_results.csv" %(self.prefix))
         with open(csvFile, "w") as fs:
-            header = "flowID,senderAvgMbps,receiverTotalMBytes,receiverAvgMbps,completionTime,convergenceTime,RTT(ms)"
+            header = "flowID,senderAvgMbps,senderAvgMbpsActual,receiverTotalMBytes,receiverAvgMbps,receiverAvgMbpsActual,completionTime,convergenceTime,RTT(ms)"
             fs.write(header + '\n')
             for k, v in results.items():
-                line = str(k)+','+str(v['senderAvgMbps'])+','+str(v['receiverTotalMBytes'])+','+str(v['receiverAvgMbps'])+','+str(v['completionTime'])+','+str(v['convergenceTime'])+','+str(v['rtt'])
+                line = str(k)+','+str(v['senderAvgMbps'])+','+str(v['senderAvgMbpsActual'])+','+str(v['receiverTotalMBytes'])+','+str(v['receiverAvgMbps'])+','+str(v['receiverAvgMbpsActual'])+','+str(v['completionTime'])+','+str(v['convergenceTime'])+','+str(v['rtt'])
                 fs.write(line + '\n')
         fs.close()
 
@@ -328,6 +491,18 @@ class ResultGenerator:
                 times.append(v['completionTime'])
         return max(times)
 
+    def getMaxTheoreticalCompletionTime(self):
+        """Output theoretical completion time of the slowest flow"""
+
+        times = []
+        for job in self.jobs:
+            if job['share'] != 0:
+                times.append(job['size'] * 8 / job['share'])
+        if times:
+            return max(times)
+        else:
+            return 'NaN'
+    
     def getUniqueEndPointPairs(self, results):
         """
         Obtain a list of unique end point pairs from traffic flows.
@@ -389,7 +564,7 @@ class ResultGenerator:
         fig.savefig(outFile)
         plt.close(fig)
 
-    def plotAllFlows(self, res, title, outFile, xlimits=None, ylimits=None):
+    def plotAllFlows(self, res, title, outFile, xlimits=None, ylimits=None, use_legend=True, sample_data_n=1):
         """Plot server throughput timeseries for all flows in single graph, similar to Figure 6 of BBR paper.
         Generates the graph in outPath/prefix_bw_all.pdf file.
 
@@ -405,9 +580,12 @@ class ResultGenerator:
         fig = plt.figure()
         labels = []
         data = []
-        for flow in res.values():
-            data.append((flow['receiverTs'], flow['receiverMbps']))
-            labels.append(flow['flowStr']+ ', RTT=' + str(flow['rtt']) + 'ms')
+        for flow_id, flow in enumerate(res.values()):
+            if 'receiverTs' in flow.keys() and 'receiverMbps' in flow.keys():
+            	data.append((flow['receiverTs'], flow['receiverMbps']))
+            	labels.append(flow['flowStr']+ ', RTT=' + str(flow['rtt']) + 'ms')
+            else:
+                print("Warning: incomplete results in flow #{}.".format(flow_id + 1))
 
         la = len(data)
         lb = len(plotColors)
@@ -419,7 +597,7 @@ class ResultGenerator:
             colors = plotColors[:la]
 
         for (x,y), cl, lab in zip(data, colors, labels):
-            plt.plot(x, y, color=cl, label=lab, linewidth=0.85)
+            plt.plot(x[::sample_data_n], y[::sample_data_n], color=cl, label=lab, linewidth=0.85)
 
         # Set axes range.
         plt.xlim(left=0)
@@ -438,7 +616,8 @@ class ResultGenerator:
         plt.xlabel('Time (sec)')
         plt.ylabel('Throughput (Mbits/sec)')
         plt.title(title)
-        plt.legend()
+        if use_legend:
+            plt.legend(frameon=False, fontsize="small")
         # plt.grid(True)
         fig.savefig(outFile)
         plt.close(fig)
@@ -463,7 +642,7 @@ class ResultGenerator:
         # First, we extract each of the n sets (outer for loop).
         # Next, we extract each of the m traffic flows within each set (inner for loop).
         # Finally, we copy the results to 'uniqPairsRes', sort them on flow ID, and call plotAllFlows.
-        for i in xrange(0, len(flowIDs), numUniqFlows):
+        for i in range(0, len(flowIDs), numUniqFlows):
             if not maxPlots:
                 break
             uniqPairsRes = {}
@@ -496,7 +675,7 @@ class ResultGenerator:
         # flow_id -> [duplicate_flow_id]
         flowGroups = defaultdict(list)
         for i in range(1, numUniqFlows+1):
-            flowGroups[i] = [j for j in xrange(i, len(flowIDs)+1, numUniqFlows)]
+            flowGroups[i] = [j for j in range(i, len(flowIDs)+1, numUniqFlows)]
 
         # Create a dictionary {group_id : group_avg_throughput_timeseries}
         avgResults = {}
@@ -535,7 +714,7 @@ class ResultGenerator:
             outFile = join(self.outPath, "%s_bw_all_unique_pairs_avg_custom_%s.pdf" %(self.prefix, time.time()))
         self.plotAllFlows(avgResults, title, outFile, xlimits, ylimits)
 
-    def plotResults(self, results):
+    def plotResults(self, results, use_legend=True, sample_data_n=1):
         """Plotting parsed results.
 
         Args:
@@ -546,7 +725,7 @@ class ResultGenerator:
         # Plotting all flows (receiver side) in one graph.
         title = "Throughput results"
         outFile = join(self.outPath, "%s_bw_all.pdf" %self.prefix)
-        self.plotAllFlows(results, title, outFile)
+        self.plotAllFlows(results, title, outFile, use_legend=use_legend, sample_data_n=sample_data_n)
 
         # Plotting each flow in a separate graph.
         plotEachFlow = self.config.plotEachFlow

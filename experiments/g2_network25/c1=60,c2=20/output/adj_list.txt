@@ -1,0 +1,27 @@
+#g2Launcher.py -i examples/dragonfly/input/ -o examples/dragonfly/output/
+# GMT Fri Aug 14 14:05:03 2020
+# 
+h8 s8
+h9 s9
+h2 s2
+h3 s3
+h1 s1
+h6 s6
+h7 s7
+h4 s4
+h5 s5
+s9 s12 s7 s8
+s8 s7 s5
+s3 s1 s10 s2
+s2 s1 s7
+s1 s4
+s7
+s6 s11 s5 s4
+s5 s4
+s4
+s12 s10 s11 h12
+s11 s10 h11
+s10 h10
+h10
+h11
+h12

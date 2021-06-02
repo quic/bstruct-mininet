@@ -32,7 +32,7 @@ def main():
     # Prepare the name and path of new example network, e.g. examples/10x_g2_network1/.
     outName = str(factor) + 'x_' + testName
     testDir = os.path.abspath(testDir)
-    print "Base example: %s" %testDir
+    print("Base example: {}".format(testDir))
     os.chdir(testDir)
     os.chdir("..")
     outPath = os.path.abspath(os.path.join(os.curdir, outName))
@@ -67,10 +67,10 @@ def main():
                     line = str(maxID + incr) + line[idx:]
                     fw.write("\n%s" % line)
                     incr += 1
-        print "Successfully created example: %s" %outPath
-        print "Change config in: %s" %os.path.join(outPath, "input/g2.conf")
+        print("Successfully created example: {}".format(outPath))
+        print("Change config in: {}".format(os.path.join(outPath, "input/g2.conf")))
     else:
-        print "Desired example network already present: %s" %outPath
+        print("Desired example network already present: {}".format(outPath))
 
 if __name__ == "__main__":
     main()

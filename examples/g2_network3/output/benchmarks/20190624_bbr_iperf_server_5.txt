@@ -1,8 +1,0 @@
-------------------------------------------------------------
-Server listening on TCP port 5006
-TCP window size: 85.3 KByte (default)
-------------------------------------------------------------
-[ 57] local 10.0.11.10 port 5006 connected with 10.0.2.10 port 55492
-[ ID] Interval       Transfer     Bandwidth
-[ 57]  0.0- 2.0 sec   106 MBytes   443 Mbits/sec
-[ 57]  2.0- 4.0 sec  78.8 MBytes   330 Mbits/sec
