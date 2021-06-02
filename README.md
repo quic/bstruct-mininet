@@ -2,6 +2,8 @@
 
 G2-Mininet provides a flexible way to create arbitrary (1) topologies, (2) routing schemes, and (3) flow configurations to analyze general network architectures with a focus on (although not limited to) understanding the bottleneck structure of high-speed communication networks (See [1, 2, 3, 4, 5]). G2-Mininet uses Mininet with OpenFlow and POX to provide SDN capabilities and iPerf to generate traffic.
 
+In this repository you will also find all the experiments (artifacts) presented in the papers. This allows anyone to reproduce the experiments. Please see the instructions below to learn how to build this software and how to run the experiments. See also the README file under the experiments directory for a description of each of the experiments.
+
 ## References
 
 [1] J. Ros-Giralt, A. Bohara, S. Yellamraju, H. Langston, R. Lethin, Y. Jiang, L. Tassiulas, J. Li, Y. Lin, Y. Tan, M. Veeraraghavan, "On the Bottleneck Structure of Congestion-Controlled Networks," ACM SIGMETRICS, Boston, June 2020.
