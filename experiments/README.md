@@ -54,7 +54,7 @@ This directory includes artifacts and experiments published in various papers. T
 25. `g2_network37`: A four-pod folded-clos network with tapering 1 and 20 skewness values.
 
 ### References
-[1] J. Ros-Giralt, A. Bohara, S. Yellamraju, H. Langston, R. Lethin, Y. Jiang, L. Tassiulas, J. Li, Y. Lin, Y. Tan, M. Veeraraghavan, "On the Bottleneck Structure of Congestion-Controlled Networks," accepted for publication at ACM SIGMETRICS, Boston, June 2020.
+[1] J. Ros-Giralt, A. Bohara, S. Yellamraju, H. Langston, R. Lethin, Y. Jiang, L. Tassiulas, J. Li, Y. Lin, Y. Tan, M. Veeraraghavan, "On the Bottleneck Structure of Congestion-Controlled Networks," ACM SIGMETRICS, Boston, June 2020.
 
 [2] J. Ros-Giralt, S. Yellamraju, A. Bohara, R. Lethin, J. Li, Y. Lin, Y. Tan, M. Veeraraghavan, Y. Jiang, L. Tassiulas, "G2: A Network Optimization Framework for High-Precision Analysis of Bottleneck and Flow Performance," International Workshop on Innovating the Network for Data Intensive Science (INDIS), Supercomputing, Denver, Nov 2019.
 
