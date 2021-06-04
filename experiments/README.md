@@ -1,3 +1,5 @@
+This directory includes artifacts and experiments published at various conferences. They are made available so that anyone can reproduce them and verify the results. For instructions on how to install G2-Mininet and run experiments in this directory, please see the README file located in the root directory.
+
 ## G2 Network Examples
 1. `g2_network1`: Google's B4 network consisting 12 nodes (data centers)
 2. `g2_network2`: A small network consisting of six flows and four links, to demonstrate small flows can be elephants
