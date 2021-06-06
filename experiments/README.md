@@ -1,26 +1,26 @@
 This directory includes artifacts and experiments published in various papers. They are made available so that anyone can reproduce them and verify the results. For instructions on how to install G2-Mininet and run experiments in this directory, please see the README file located in the root directory.
 
 ## G2 Network Examples
-1. `g2_network1`: Google's B4 network consisting 12 nodes (data centers)
-2. `g2_network2`: A small network consisting of six flows and four links, to demonstrate small flows can be elephants
+1. `g2_network01`: Google's B4 network consisting 12 nodes (data centers)
+2. `g2_network02`: A small network consisting of six flows and four links, to demonstrate small flows can be elephants
    1. Section 2.6 and Fig. 7 [1]
    2. Section II C and Fig. 4 [2]
-3. `g2_network3`: Google's B4 network consisting of 12 nodes and five flows
+3. `g2_network03`: Google's B4 network consisting of 12 nodes and five flows
    1. Section 2.4 and Fig. 5 [1]
    2. Section II B and Fig. 2 [2]
-4. `g2_network4`: A two-level bottleneck structure network containing 12 nodes, two flows
+4. `g2_network04`: A two-level bottleneck structure network containing 12 nodes, two flows
    1. Section 3.1 and Fig. 8-a [1]
    2. Section V and Fig. 10-a [2]
-5. `g2_network5`: A three-level bottleneck structure network containing 12 nodes, three flows
+5. `g2_network05`: A three-level bottleneck structure network containing 12 nodes, three flows
    1. Section 3.1 and Fig. 8-b [1]
    2. Section V and Fig. 10-b [2]
-6. `g2_network6`: A four-level bottleneck structure network containing 12 nodes, six flows
+6. `g2_network06`: A four-level bottleneck structure network containing 12 nodes, six flows
    1. Section 3.1 and Fig. 8-c [1]
-7. `g2_network7`: A two-level bottleneck structure network containing 12 nodes, two flows, RTT = 0 ms
+7. `g2_network07`: A two-level bottleneck structure network containing 12 nodes, two flows, RTT = 0 ms
    1. Section 3.1 and Fig. 8-a [1]
-8. `g2_network8`: A three-level bottleneck structure network containing 12 nodes, three flows, RTT = 0 ms
+8. `g2_network08`: A three-level bottleneck structure network containing 12 nodes, three flows, RTT = 0 ms
    1. Section 3.1 and Fig. 8-b [1]
-9. `g2_network9`: A four-level bottleneck structure network containing 12 nodes, six flows, RTT = 0 ms
+9. `g2_network09`: A four-level bottleneck structure network containing 12 nodes, six flows, RTT = 0 ms
    1. Section 3.1 and Fig. 8-c [1]
 10. `g2_network10`: A nine-node linear bottleneck structure network with capacities modeled using '10 + 20(n-1)^2))'
     1. Section 3.4 and Fig. 14 [1]
