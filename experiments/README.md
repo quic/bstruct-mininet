@@ -22,7 +22,7 @@ This directory includes artifacts and experiments published in various papers. T
    1. Section 3.1 and Fig. 8-b [1]
 9. `g2_network09`: A four-level bottleneck structure network containing 12 nodes, six flows, RTT = 0 ms
    1. Section 3.1 and Fig. 8-c [1]
-10. `g2_network10`: A nine-node linear bottleneck structure network with capacities modeled using '10 + 20(n-1)^2))'
+10. `g2_network10`: A nine-node linear bottleneck structure network with capacities modeled using `10 + 20(n-1)^2`
     1. Section 3.4 and Fig. 14 [1]
 11. `g2_network11, 12, 13, 14, 15`: Time-bound constrained data transfers experiments on Google's B4 network for 1) no traffic shaping, 2) traffic shaping flow 4, 3) traffic shaping flow 4 and flow 8, 4) traffic shaping flow 1, and 5) traffic shaping flow 3, flow 4 and flow 8, respectively. [4]
     1. Section 3.3; Fig. 7, 8, A4 [4]
