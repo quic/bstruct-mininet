@@ -8,7 +8,6 @@ In this repository you will also find all the experiments (artifacts) presented 
 
 ## Source Directory Structure
 
-* Source hosted at: https://github.com/reservoirlabs/g2-mininet
 * Directory structure:
   * `experiments`: Example networks tested with G2-Mininet.
   * `devtools`: Development utilities, not for release.
@@ -22,8 +21,6 @@ In this repository you will also find all the experiments (artifacts) presented 
 [2] Jordi Ros-Giralt, Noah Amsel, Sruthi Yellamraju, James Ezick, Richard Lethin, Yuang Jiang, Aosong Feng, Leandros Tassiulas,  Zhenguo Wu, Min Yeh Teh, Keren Bergman, "Designing Data Center Networks Using Bottleneck Structures," Accepted for publication at ACM SIGCOMM 2021.
 
 [3] Jordi Ros-Giralt, Noah Amsel, Sruthi Yellamraju, James Ezick, Richard Lethin, Yuang Jiang, Aosong Feng, Leandros Tassiulas,  Zhenguo Wu, Min Yeh Teh, Keren Bergman, "A Quantitative Theory of Bottleneck Structures for Data Networks," Submitted to Transactions on Networking, 2021. (Under review).
-
-For any questions, please contact Reservoir Labs at https://www.reservoir.com/company/contact/
 
 ## Getting Started
 
@@ -53,7 +50,7 @@ For any questions, please contact Reservoir Labs at https://www.reservoir.com/co
 
   ```shell
   cd $MININET_SRC
-  git clone https://github.com/reservoirlabs/g2-mininet.git
+  git clone $THIS_REPO_URL
   cp g2-mininet/pox/g2_static.py $MININET_SRC/pox/ext/
   ```
 
