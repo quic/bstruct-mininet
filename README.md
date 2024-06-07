@@ -110,3 +110,6 @@ In this repository you will also find all the experiments (artifacts) presented 
    ```
 
 4. See the file `experiments/README` for a description of all the experiments available.
+
+## License
+BStruct-Mininet is licensed under the BSD 3-clause "New" or "Revised" License. Check out the [LICENSE](https://github.com/quic-nwtn/bstruct-mininet/blob/master/LICENSE) for more details.
